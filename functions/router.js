@@ -9,9 +9,9 @@ const monRouter = (db) => {
      */
     router.get("/v1/movies", async (req, res) => {
         console.log('get all the movies')
-        let results = []
         // qs == querysnapchot
         const qs = await db.collection("movies").get()
+        let results = []
         qs.forEach(doc => results.push(doc.data()))
         console.log(results)
         res.send(results)
@@ -23,6 +23,7 @@ const monRouter = (db) => {
      */
     router.get("/v1/movies/:movieId", async (req, res) => {
         console.log('get a specific movie')
+
         const qs = await db.collection("movies").doc(req.params.movieId).get()
         let result = qs.data()
         console.log(result)
@@ -36,14 +37,20 @@ const monRouter = (db) => {
     router.post("/v1/movies", async (req, res) => {
         console.log('méthode post')
         console.log(req.body)
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("movies").doc().set(bodyData);
 
-        let results = []
-        const qsCallback = await db.collection("movies").get()
-        qsCallback.forEach(doc => results.push(doc.data()))
-        console.log(results)
-        res.send(results)
+        if ((req.body).length > 0) {
+            const bodyData = JSON.parse(req.body)
+            const qs = await db.collection("movies").doc().set(bodyData);
+
+            let results = []
+            const qsCallback = await db.collection("movies").get()
+            qsCallback.forEach(doc => results.push(doc.data()))
+            console.log(results)
+            res.send(results)
+        }
+        else {
+            res.send('Rien à ajouter dans la base de données films')
+        }
     })
 
     /**
@@ -52,13 +59,20 @@ const monRouter = (db) => {
      */
     router.patch("/v1/movies/:movieId", async (req, res) => {
         console.log('méthode patch')
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("movies").doc(req.params.movieId).update(bodyData)
 
-        const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
-        let result = qsCallback.data()
-        console.log(result)
-        res.send(result)
+        if ((req.params.movieId).length > 0 &&
+            (req.body).length > 0) {
+            const bodyData = JSON.parse(req.body)
+            const qs = await db.collection("movies").doc(req.params.movieId).update(bodyData)
+
+            const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
+            let result = qsCallback.data()
+            console.log(result)
+            res.send(result)
+        }
+        else {
+            res.send('Rien à modifier dans la base de données films')
+        }
     })
 
     /**
@@ -68,13 +82,18 @@ const monRouter = (db) => {
     router.patch("/v1/movies/:movieId/like", async (req, res) => {
         console.log('méthode patch +1 like')
 
-        // NB : works even if the attribute "likes" is undefined
-        const qs = await db.collection("movies").doc(req.params.movieId).update({ likes: admin.firestore.FieldValue.increment(1) })
+        if ((req.params.movieId).length > 0) {
+            // NB : works even if the attribute "likes" is undefined
+            const qs = await db.collection("movies").doc(req.params.movieId).update({ likes: admin.firestore.FieldValue.increment(1) })
 
-        const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
-        let result = qsCallback.data()
-        console.log(result)
-        res.send(result)
+            const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
+            let result = qsCallback.data()
+            console.log(result)
+            res.send(result)
+        }
+        else {
+            res.send('Identifiant du film incorrect')
+        }
     })
 
     /**
@@ -83,8 +102,14 @@ const monRouter = (db) => {
      */
     router.delete("/v1/movies/:movieId", async (req, res) => {
         console.log('delete movie')
-        const qs = await db.collection("movies").doc(req.params.movieId).delete()
-        res.send('Movie id ' + req.params.movieId + ' successfully deleted !')
+
+        if ((req.params.movieId).length > 0) {
+            const qs = await db.collection("movies").doc(req.params.movieId).delete()
+            res.send('Movie id ' + req.params.movieId + ' successfully deleted !')
+        }
+        else {
+            res.send('Identifiant du film incorrect')
+        }
     })
 
     // ----------------------------- CATEGORIES ----------------------------- //
@@ -94,9 +119,9 @@ const monRouter = (db) => {
      */
     router.get("/v1/categories", async (req, res) => {
         console.log('GET all categories')
-        let results = []
-        // qs = querysnapchot
+
         const qs = await db.collection("categories").get()
+        let results = []
         qs.forEach(doc => results.push(doc.data()))
         console.log(results)
         res.send(results)
@@ -108,6 +133,7 @@ const monRouter = (db) => {
      */
     router.get("/v1/categories/:categoryId", async (req, res) => {
         console.log('catégorie spécifique')
+
         const qs = await db.collection("categories").doc(req.params.categoryId).get()
         let result = qs.data()
         console.log(result)
@@ -120,15 +146,21 @@ const monRouter = (db) => {
      */
     router.post("/v1/categories", async (req, res) => {
         console.log('category post')
-        let results = []
         console.log(req.body)
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("categories").doc().set(bodyData);
 
-        const qsCallback = await db.collection("categories").get()
-        qsCallback.forEach(doc => results.push(doc.data()))
-        console.log(results)
-        res.send(results)
+        if ((req.body).length > 0) {
+            let results = []
+            const bodyData = JSON.parse(req.body)
+            const qs = await db.collection("categories").doc().set(bodyData);
+
+            const qsCallback = await db.collection("categories").get()
+            qsCallback.forEach(doc => results.push(doc.data()))
+            console.log(results)
+            res.send(results)
+        }
+        else {
+            res.send('Rien à ajouter dans la base de données catégories')
+        }
     })
 
     /**
@@ -137,14 +169,21 @@ const monRouter = (db) => {
      */
     router.put("/v1/categories/:categoryId", async (req, res) => {
         console.log('category patch')
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("categories").doc(req.params.categoryId).update(bodyData)
 
-        let result = null
-        const qsCallback = await db.collection("categories").doc(req.params.categoryId).get()
-        result = qsCallback.data()
-        console.log(result)
-        res.send(result)
+        if ((req.body).length > 0 &&
+            (req.params.categoryId).length > 0) {
+            const bodyData = JSON.parse(req.body)
+            const qs = await db.collection("categories").doc(req.params.categoryId).update(bodyData)
+
+            let result = null
+            const qsCallback = await db.collection("categories").doc(req.params.categoryId).get()
+            result = qsCallback.data()
+            console.log(result)
+            res.send(result)
+        }
+        else {
+            res.send('Rien à modifier dans les catégories')
+        }
     })
 
     /**
@@ -153,8 +192,14 @@ const monRouter = (db) => {
      */
     router.delete("/v1/categories/:categoryId", async (req, res) => {
         console.log('delete category')
-        const qs = await db.collection("categories").doc(req.params.categoryId).delete()
-        res.send('Category id ' + req.params.categoryId + ' successfully deleted !')
+
+        if ((req.params.categoryId).length > 0) {
+            const qs = await db.collection("categories").doc(req.params.categoryId).delete()
+            res.send('Category id ' + req.params.categoryId + ' successfully deleted !')
+        }
+        else {
+            res.send('Identifiant de la catégorie incorrect')
+        }
     })
 
     return router
