@@ -12,6 +12,9 @@ const db = admin.firestore()
 // Creates express server
 const app = express()
 
+// Parses everything to JSON
+app.use(express.json())
+
 // Uses the middleware
 app.use(monRouter(db))
 

@@ -1,3 +1,4 @@
+const { body, check, validationResult } = require('express-validator');
 const admin = require("firebase-admin")
 const router = require('express').Router()
 const monRouter = (db) => {
@@ -8,12 +9,14 @@ const monRouter = (db) => {
      * gets all the movies
      */
     router.get("/v1/movies", async (req, res) => {
-        console.log('get all the movies')
-        // qs == querysnapchot
-        const qs = await db.collection("movies").get()
         let results = []
-        qs.forEach(doc => results.push(doc.data()))
-        console.log(results)
+        const qs = await db.collection("movies").get()
+        qs.forEach(doc => {
+            let content = doc.data()
+            content.identifier = doc.id
+            results.push(content)
+        })
+
         res.send(results)
     })
 
@@ -22,11 +25,10 @@ const monRouter = (db) => {
      * gets a specific movie
      */
     router.get("/v1/movies/:movieId", async (req, res) => {
-        console.log('get a specific movie')
-
         const qs = await db.collection("movies").doc(req.params.movieId).get()
         let result = qs.data()
-        console.log(result)
+        result.identifier = qs.id
+
         res.send(result)
     })
 
@@ -34,45 +36,44 @@ const monRouter = (db) => {
      * POST /
      * Adds a new movie
      */
-    router.post("/v1/movies", async (req, res) => {
-        console.log('méthode post')
-        console.log(req.body)
+    router.post("/v1/movies",
+        [body('name').isLength({ min: 3 }),
+        body('author').isLength({ min: 3 }),
+        body('description').isLength({ min: 3 }),
+        body('video').isURL(),
+        body('img').isURL()],
+        async (req, res) => {
 
-        if ((req.body).length > 0) {
-            const bodyData = JSON.parse(req.body)
-            const qs = await db.collection("movies").doc().set(bodyData);
+            const errors = validationResult(req)
+            console.log(errors);
+            if (!errors.isEmpty()) {
+                return res.status(422).json({ errors: errors.array() })
+            }
 
+            const qs = await db.collection("movies").doc().set(req.body);
             let results = []
             const qsCallback = await db.collection("movies").get()
-            qsCallback.forEach(doc => results.push(doc.data()))
-            console.log(results)
+            qsCallback.forEach(doc => {
+                let content = doc.data()
+                content.identifier = doc.id
+                results.push(content)
+            })
+
             res.send(results)
-        }
-        else {
-            res.send('Rien à ajouter dans la base de données films')
-        }
-    })
+        })
 
     /**
      * PATCH /:movieId
      * Updates attributes of a pre-existing movie
      */
     router.patch("/v1/movies/:movieId", async (req, res) => {
-        console.log('méthode patch')
 
-        if ((req.params.movieId).length > 0 &&
-            (req.body).length > 0) {
-            const bodyData = JSON.parse(req.body)
-            const qs = await db.collection("movies").doc(req.params.movieId).update(bodyData)
+        const qs = await db.collection("movies").doc(req.params.movieId).update(req.body)
 
-            const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
-            let result = qsCallback.data()
-            console.log(result)
-            res.send(result)
-        }
-        else {
-            res.send('Rien à modifier dans la base de données films')
-        }
+        const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
+        let result = qsCallback.data()
+
+        res.send(result)
     })
 
     /**
@@ -80,20 +81,15 @@ const monRouter = (db) => {
      * Adds a like to a pre-existing movie
      */
     router.patch("/v1/movies/:movieId/like", async (req, res) => {
-        console.log('méthode patch +1 like')
 
         if ((req.params.movieId).length > 0) {
             // NB : works even if the attribute "likes" is undefined
             const qs = await db.collection("movies").doc(req.params.movieId).update({ likes: admin.firestore.FieldValue.increment(1) })
 
-            const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
-            let result = qsCallback.data()
-            console.log(result)
-            res.send(result)
-        }
-        else {
-            res.send('Identifiant du film incorrect')
-        }
+        const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
+        let result = qsCallback.data()
+
+        res.send(result)
     })
 
     /**
@@ -101,15 +97,8 @@ const monRouter = (db) => {
      * Deletes a movie by its id
      */
     router.delete("/v1/movies/:movieId", async (req, res) => {
-        console.log('delete movie')
-
-        if ((req.params.movieId).length > 0) {
-            const qs = await db.collection("movies").doc(req.params.movieId).delete()
-            res.send('Movie id ' + req.params.movieId + ' successfully deleted !')
-        }
-        else {
-            res.send('Identifiant du film incorrect')
-        }
+        const qs = await db.collection("movies").doc(req.params.movieId).delete()
+        res.send('Movie id ' + req.params.movieId + ' successfully deleted !')
     })
 
     // ----------------------------- CATEGORIES ----------------------------- //
@@ -118,12 +107,15 @@ const monRouter = (db) => {
      * gets all the categories
      */
     router.get("/v1/categories", async (req, res) => {
-        console.log('GET all categories')
-
-        const qs = await db.collection("categories").get()
         let results = []
-        qs.forEach(doc => results.push(doc.data()))
-        console.log(results)
+        // qs = querysnapchot
+        const qs = await db.collection("categories").get()
+        qs.forEach(doc => {
+            let content = doc.data()
+            content.identifier = doc.id
+            results.push(content)
+        })
+
         res.send(results)
     })
 
@@ -132,11 +124,10 @@ const monRouter = (db) => {
      * gets a specific category
      */
     router.get("/v1/categories/:categoryId", async (req, res) => {
-        console.log('catégorie spécifique')
-
         const qs = await db.collection("categories").doc(req.params.categoryId).get()
         let result = qs.data()
-        console.log(result)
+        result.identifier = qs.id
+
         res.send(result)
     })
 
@@ -144,62 +135,54 @@ const monRouter = (db) => {
      * POST /
      * Adds a new category
      */
-    router.post("/v1/categories", async (req, res) => {
-        console.log('category post')
-        console.log(req.body)
+    router.post("/v1/categories",
+        body('name').isLength({ min: 2 }),
+        async (req, res) => {
 
-        if ((req.body).length > 0) {
+            const errors = validationResult(req)
+            console.log(errors);
+            if (!errors.isEmpty()) {
+                return res.status(422).json({ errors: errors.array() })
+            }
+
             let results = []
-            const bodyData = JSON.parse(req.body)
-            const qs = await db.collection("categories").doc().set(bodyData);
+            const qs = await db.collection("categories").doc().set(req.body);
 
             const qsCallback = await db.collection("categories").get()
             qsCallback.forEach(doc => results.push(doc.data()))
-            console.log(results)
+
             res.send(results)
-        }
-        else {
-            res.send('Rien à ajouter dans la base de données catégories')
-        }
-    })
+        })
 
     /**
      * PUT /:categoryId
      * Changes the category
      */
-    router.put("/v1/categories/:categoryId", async (req, res) => {
-        console.log('category patch')
+    router.put("/v1/categories/:categoryId",
+        body('name').isLength({ min: 2 }),
+        async (req, res) => {
 
-        if ((req.body).length > 0 &&
-            (req.params.categoryId).length > 0) {
-            const bodyData = JSON.parse(req.body)
-            const qs = await db.collection("categories").doc(req.params.categoryId).update(bodyData)
+            const errors = validationResult(req)
+            console.log(errors);
+            if (!errors.isEmpty()) {
+                return res.status(422).json({ errors: errors.array() })
+            }
 
-            let result = null
+            const qs = await db.collection("categories").doc(req.params.categoryId).update(req.body)
+
             const qsCallback = await db.collection("categories").doc(req.params.categoryId).get()
-            result = qsCallback.data()
-            console.log(result)
+            let result = qsCallback.data()
+
             res.send(result)
-        }
-        else {
-            res.send('Rien à modifier dans les catégories')
-        }
-    })
+        })
 
     /**
      * DELETE /:categoryId
      * Deletes a specific category
      */
     router.delete("/v1/categories/:categoryId", async (req, res) => {
-        console.log('delete category')
-
-        if ((req.params.categoryId).length > 0) {
-            const qs = await db.collection("categories").doc(req.params.categoryId).delete()
-            res.send('Category id ' + req.params.categoryId + ' successfully deleted !')
-        }
-        else {
-            res.send('Identifiant de la catégorie incorrect')
-        }
+        const qs = await db.collection("categories").doc(req.params.categoryId).delete()
+        res.send('Category id ' + req.params.categoryId + ' successfully deleted !')
     })
 
     return router
