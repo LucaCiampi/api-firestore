@@ -1,4 +1,4 @@
-const { body, validationResult } = require('express-validator');
+const { body, check, validationResult } = require('express-validator');
 const admin = require("firebase-admin")
 const router = require('express').Router()
 const monRouter = (db) => {
@@ -36,17 +36,21 @@ const monRouter = (db) => {
      * POST /
      * Adds a new movie
      */
-    router.post("/v1/movies", async (req, res) => {
-        if ((req.body).length > 0) {
-            const bodyData = JSON.parse(req.body)
-            
-            // Verifications
-            // if ((bodyData.video).length > 0) {
-            //     if (!verifyUrl(bodyData.video)) res.send('URL de la vidéo incorrect')
-            // }
+    router.post("/v1/movies",
+        [body('name').isLength({ min: 3 }),
+        body('author').isLength({ min: 3 }),
+        body('description').isLength({ min: 3 }),
+        body('video').isURL(),
+        body('img').isURL()],
+        async (req, res) => {
 
-            const qs = await db.collection("movies").doc().set(bodyData);
+            const errors = validationResult(req)
+            console.log(errors);
+            if (!errors.isEmpty()) {
+                return res.status(422).json({ errors: errors.array() })
+            }
 
+            const qs = await db.collection("movies").doc().set(req.body);
             let results = []
             const qsCallback = await db.collection("movies").get()
             qsCallback.forEach(doc => {
@@ -56,19 +60,15 @@ const monRouter = (db) => {
             })
 
             res.send(results)
-        }
-        else {
-            res.send("Pas d'objet à ajouter")
-        }
-    })
+        })
 
     /**
      * PATCH /:movieId
      * Updates attributes of a pre-existing movie
      */
     router.patch("/v1/movies/:movieId", async (req, res) => {
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("movies").doc(req.params.movieId).update(bodyData)
+
+        const qs = await db.collection("movies").doc(req.params.movieId).update(req.body)
 
         const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
         let result = qsCallback.data()
@@ -109,7 +109,11 @@ const monRouter = (db) => {
         let results = []
         // qs = querysnapchot
         const qs = await db.collection("categories").get()
-        qs.forEach(doc => results.push(doc.data()))
+        qs.forEach(doc => {
+            let content = doc.data()
+            content.identifier = doc.id
+            results.push(content)
+        })
 
         res.send(results)
     })
@@ -121,6 +125,7 @@ const monRouter = (db) => {
     router.get("/v1/categories/:categoryId", async (req, res) => {
         const qs = await db.collection("categories").doc(req.params.categoryId).get()
         let result = qs.data()
+        result.identifier = qs.id
 
         res.send(result)
     })
@@ -129,32 +134,46 @@ const monRouter = (db) => {
      * POST /
      * Adds a new category
      */
-    router.post("/v1/categories", async (req, res) => {
-        let results = []
-        console.log(req.body)
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("categories").doc().set(bodyData);
+    router.post("/v1/categories",
+        body('name').isLength({ min: 2 }),
+        async (req, res) => {
 
-        const qsCallback = await db.collection("categories").get()
-        qsCallback.forEach(doc => results.push(doc.data()))
+            const errors = validationResult(req)
+            console.log(errors);
+            if (!errors.isEmpty()) {
+                return res.status(422).json({ errors: errors.array() })
+            }
 
-        res.send(results)
-    })
+            let results = []
+            const qs = await db.collection("categories").doc().set(req.body);
+
+            const qsCallback = await db.collection("categories").get()
+            qsCallback.forEach(doc => results.push(doc.data()))
+
+            res.send(results)
+        })
 
     /**
      * PUT /:categoryId
      * Changes the category
      */
-    router.put("/v1/categories/:categoryId", async (req, res) => {
-        const bodyData = JSON.parse(req.body)
-        const qs = await db.collection("categories").doc(req.params.categoryId).update(bodyData)
+    router.put("/v1/categories/:categoryId",
+        body('name').isLength({ min: 2 }),
+        async (req, res) => {
 
-        let result = null
-        const qsCallback = await db.collection("categories").doc(req.params.categoryId).get()
-        result = qsCallback.data()
+            const errors = validationResult(req)
+            console.log(errors);
+            if (!errors.isEmpty()) {
+                return res.status(422).json({ errors: errors.array() })
+            }
 
-        res.send(result)
-    })
+            const qs = await db.collection("categories").doc(req.params.categoryId).update(req.body)
+
+            const qsCallback = await db.collection("categories").doc(req.params.categoryId).get()
+            let result = qsCallback.data()
+
+            res.send(result)
+        })
 
     /**
      * DELETE /:categoryId
@@ -166,13 +185,6 @@ const monRouter = (db) => {
     })
 
     return router
-}
-
-/* Verifications */
-const urlRegex =  /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()!@:%_\+.~#?&\/\/=]*)/g
-function verifyUrl(url) {
-    if (urlRegex.test(url)) return true
-    else return false
 }
 
 module.exports = monRouter
