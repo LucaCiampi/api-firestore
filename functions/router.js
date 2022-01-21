@@ -86,10 +86,11 @@ const monRouter = (db) => {
             // NB : works even if the attribute "likes" is undefined
             const qs = await db.collection("movies").doc(req.params.movieId).update({ likes: admin.firestore.FieldValue.increment(1) })
 
-        const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
-        let result = qsCallback.data()
+            const qsCallback = await db.collection("movies").doc(req.params.movieId).get()
+            let result = qsCallback.data()
 
-        res.send(result)
+            res.send(result)
+        }
     })
 
     /**
